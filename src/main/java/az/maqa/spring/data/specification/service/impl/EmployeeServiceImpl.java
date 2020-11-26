@@ -1,16 +1,18 @@
 package az.maqa.spring.data.specification.service.impl;
 
+import az.maqa.spring.data.specification.domain.SearchCriteria;
 import az.maqa.spring.data.specification.entity.Employee;
+import az.maqa.spring.data.specification.query.EmployeeSpecification;
 import az.maqa.spring.data.specification.repository.EmployeeRepository;
 import az.maqa.spring.data.specification.service.EmployeeService;
+import az.maqa.spring.data.specification.util.EmployeeSpecificationBuilder;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
 
-import static az.maqa.spring.data.specification.query.EmployeeSpecification.*;
-import static org.springframework.data.jpa.domain.Specification.where;
+import static az.maqa.spring.data.specification.domain.enums.QueryOperator.*;
 
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
@@ -23,41 +25,49 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public List<Employee> getEqualAge(Integer age) {
-        Specification<Employee> spec = equalAge(age);
-        return employeeRepository.findAll(spec);
+        SearchCriteria searchCriteria = new SearchCriteria("age", EQUALS, age);
+        return getResult(searchCriteria);
     }
 
     @Override
     public List<Employee> getGreaterThanSalary(Double salary) {
-        Specification<Employee> spec = greaterThanSalary(salary);
-        return employeeRepository.findAll(spec);
+        SearchCriteria searchCriteria = new SearchCriteria("salary", GREATER_THAN, salary);
+        return getResult(searchCriteria);
     }
 
     @Override
     public List<Employee> getLessThanSalary(Double salary) {
-        Specification<Employee> spec = lessThanSalary(salary);
-        return employeeRepository.findAll(spec);
+        SearchCriteria searchCriteria = new SearchCriteria("salary", LESS_THAN, salary);
+        return getResult(searchCriteria);
     }
 
     @Override
     public List<Employee> getNameLike(String name) {
-        Specification<Employee> spec = likeNameQuery(name);
-        return employeeRepository.findAll(spec);
+        SearchCriteria searchCriteria = new SearchCriteria("name", LIKE, name);
+        return getResult(searchCriteria);
     }
 
     @Override
     public List<Employee> betweenSalary(Double minSalary, Double maxSalary) {
-        Specification<Employee> lessThanSalary = lessThanSalary(maxSalary);
-        Specification<Employee> greaterThanSalary = greaterThanSalary(minSalary);
-        return employeeRepository.findAll(where(lessThanSalary).and(greaterThanSalary));
+        EmployeeSpecificationBuilder builder = new EmployeeSpecificationBuilder();
+        builder.with("salary", GREATER_THAN, minSalary);
+        builder.with("salary", LESS_THAN, maxSalary);
+        Specification<Employee> specs = builder.build();
+        return employeeRepository.findAll(specs);
     }
 
     @Override
     public List<Employee> findEmployeeByNameAndHireDateAndSalary(String name, Date hireDate, Double salary) {
-        Specification<Employee> equalName = equalName(name);
-        Specification<Employee> equalHireDate = equalHireDate(hireDate);
-        Specification<Employee> equalSalary = equalSalary(salary);
-        return employeeRepository.findAll(where(equalName).and(equalHireDate).and(equalSalary));
+        EmployeeSpecificationBuilder builder = new EmployeeSpecificationBuilder();
+        builder.with("name", EQUALS, name);
+        builder.with("hireDate", EQUALS, hireDate);
+        builder.with("salary", EQUALS, salary);
+        Specification<Employee> specs = builder.build();
+        return employeeRepository.findAll(specs);
     }
 
+    private List<Employee> getResult(SearchCriteria searchCriteria) {
+        Specification<Employee> spec = EmployeeSpecification.createSpecification(searchCriteria);
+        return employeeRepository.findAll(spec);
+    }
 }
